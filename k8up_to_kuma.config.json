@@ -1,0 +1,8 @@
+{
+  "hooks": [
+    {
+      "k8up_name": "k8up-backup-name",
+      "target": "https://your.kuma.instance.com/configured_webhook"
+    }
+  ]
+}
