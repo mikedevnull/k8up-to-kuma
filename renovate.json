@@ -20,5 +20,5 @@
       "groupName": "Github actions"
     }
   ],
-  schedule: ["every weekend"]
+  "schedule": ["every weekend"]
 }
