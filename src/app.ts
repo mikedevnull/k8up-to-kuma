@@ -1,7 +1,12 @@
 import express from "express";
 import fs from "node:fs";
+import { pinoHttp } from "pino-http";
+import { pino } from "pino";
+const logger = pino({ level: "debug" });
+
 import { CONFIGURATION_SCHEMA } from "./hook-config.schema";
 import { K8UP_STATUS_UPDATE_SCHEMA } from "./status-update.schema";
+
 const app = express();
 const port = process.env.K8UP_TO_KUMA_PORT
   ? parseInt(process.env.K8UP_TO_KUMA_PORT)
@@ -17,6 +22,7 @@ const hookMap = new Map<string, string>();
 config.hooks.forEach(({ k8up_name, target }) => hookMap.set(k8up_name, target));
 
 app.use(express.json());
+app.use(pinoHttp({ logger }));
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -25,34 +31,39 @@ app.get("/", (req, res) => {
 app.post("/update", async (req, res) => {
   const result = K8UP_STATUS_UPDATE_SCHEMA.safeParse(req.body);
   if (!result.success) {
-    console.log(`Failed to parse input: ${result.error}`);
+    req.log.debug({ body: req.body }, "Received unparsable body");
+    req.log.error("Failed to parse input: %s", result.error);
     res.sendStatus(400);
     return;
   }
   const update = result.data;
   const hookTarget = hookMap.get(update.name);
   if (hookTarget === undefined) {
-    console.log(`Unkown hook for ${update.name} requested`);
+    req.log.error({ update }, "Unkown hook requested");
     res.sendStatus(404);
     return;
   }
+  req.log.info({ update }, "Received update for %s", hookTarget);
   if (update.backup_metrics.errors > 0) {
-    console.log(
-      `Backup of ${update.name} got ${update.backup_metrics.errors} errors, not triggering hook`
-    );
+    req.log.warn(update, "Backup of got errors, not triggering hook");
     res.sendStatus(200);
     return;
   }
-  console.log(`Forwarding to hook target ${hookTarget}`);
+  req.log.debug({ update }, "Forwarding to hook target");
   const response = await fetch(hookTarget);
   if (!response.ok) {
-    console.log("Failed to forward update to hook");
+    req.log.error(
+      { update },
+      "Failed to forward update to hook (%s)",
+      response.status
+    );
     res.sendStatus(500);
     return;
   }
+  req.log.info({ update }, "Sucessfully triggered update hook");
   res.sendStatus(200);
 });
 
 app.listen(port, host, () => {
-  return console.log(`K8up to Kuma is listening at http://${host}:${port}`);
+  logger.info(`K8up to Kuma is listening at http://${host}:${port}`);
 });
