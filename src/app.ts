@@ -43,9 +43,18 @@ app.post("/update", async (req, res) => {
     res.sendStatus(404);
     return;
   }
+  if (update.backup_metrics === undefined) {
+    if (update.snapshots) {
+      req.log.info(update, "Ignoring update about existing snapshots");
+      res.sendStatus(200);
+    } else {
+      res.sendStatus(400);
+    }
+    return;
+  }
   req.log.info({ update }, "Received update for %s", hookTarget);
   if (update.backup_metrics.errors > 0) {
-    req.log.warn(update, "Backup of got errors, not triggering hook");
+    req.log.warn(update, "Backup got errors, not triggering hook");
     res.sendStatus(200);
     return;
   }

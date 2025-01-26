@@ -16,10 +16,16 @@ const K8UP_BACKUP_METRICS_SCHEMA = z.object({
   id: z.string(),
 });
 
-export const K8UP_STATUS_UPDATE_SCHEMA = z.object({
-  name: z.string(),
-  bucket_name: z.string(),
-  backup_metrics: K8UP_BACKUP_METRICS_SCHEMA,
-});
+export const K8UP_STATUS_UPDATE_SCHEMA = z
+  .object({
+    name: z.string(),
+    bucket_name: z.string(),
+    backup_metrics: z.optional(K8UP_BACKUP_METRICS_SCHEMA),
+    snapshots: z.optional(z.array(z.any())),
+  })
+  .refine(
+    (data) => data.backup_metrics || data.snapshots,
+    "Either backup metrics or snapshots should be filled in"
+  );
 
 export type K8UpStatusUpdate = z.infer<typeof K8UP_STATUS_UPDATE_SCHEMA>;
