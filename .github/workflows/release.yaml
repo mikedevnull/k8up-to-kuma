@@ -1,8 +1,12 @@
 name: Release
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: 
+      - Linting
+      - Testing
+    branches: [main]
+    types: 
+      - completed
 
 permissions:
   contents: read # for checkout
