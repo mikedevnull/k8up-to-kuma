@@ -2,7 +2,6 @@ name: Release
 on:
   workflow_run:
     workflows: 
-      - Linting
       - Testing
     branches: [main]
     types: 
