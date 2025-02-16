@@ -1,18 +1,32 @@
 name: Release
 on:
-  workflow_run:
-    workflows: 
-      - Testing
-    branches: [main]
-    types: 
-      - completed
+  schedule:
+    - cron: "25 18 * * 1"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 permissions:
   contents: read # for checkout
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["lts/*"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run lint 
+    - run: npm run build 
   release:
     name: Release
+    needs: [validate]
     runs-on: ubuntu-latest
     permissions:
       contents: write # to be able to publish a GitHub release
